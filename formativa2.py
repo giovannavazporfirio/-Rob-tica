@@ -1,8 +1,7 @@
-from hub import port 
+from hub import port
 from hub import sound
 from hub import light_matrix
 import runloop, motor_pair, distance_sensor, color_sensor, color, force_sensor
-#Função retorna verdadeiro (True) se um obstáculo for encontrado a 5cm
 CM_PER_ROT = 17.6
 def deg_for_cm(cm):
     return int(cm / CM_PER_ROT * 360)
@@ -15,6 +14,59 @@ def color_found():
 def force_sensor_pressed():
     return force_sensor.pressed(port.B)
 motor_pair.pair(motor_pair.PAIR_1, port.C, port.D)
+async def oito():
+    dist_cm = 20# distância de cada segmento
+    dist_deg = deg_for_cm(dist_cm)
+    await motor_pair.move_tank_for_degrees(
+        motor_pair.PAIR_1,
+        dist_deg,
+        200,# esquerdo
+        700# direito
+    )
+    # 2) Curva para a esquerda (esq 70%, dir 20%)
+    await motor_pair.move_tank_for_degrees(
+        motor_pair.PAIR_1,
+        dist_deg,
+        700,
+        200
+    )
+    # 3) Curva para a esquerda (esq 70%, dir 20%)
+    await motor_pair.move_tank_for_degrees(
+        motor_pair.PAIR_1,
+        dist_deg,
+        700,
+        200
+    )
+    # 4) Curva para a direita (esq 20%, dir 70%)
+    await motor_pair.move_tank_for_degrees(
+        motor_pair.PAIR_1,
+        dist_deg,
+        200,
+        700
+    )
+async def frentetras():
+    await motor_pair.move_for_degrees(
+        motor_pair.PAIR_1,
+        deg_for_cm(30),
+        0, # steering reto
+        velocity=600 # ajuste se quiser (deg/s)
+    )
+    # Trás 30 cm
+    await motor_pair.move_for_degrees(
+        motor_pair.PAIR_1,
+        -deg_for_cm(30),# negativo = trás
+        0,
+        velocity=600
+    )
+async def seqsonseimagens():
+    light_matrix.show_image(light_matrix.IMAGE_HAPPY)
+    await sound.beep(400, 250)
+    light_matrix.show_image(light_matrix.IMAGE_SAD)
+    await sound.beep(600, 250)
+    light_matrix.show_image(light_matrix.IMAGE_ANGRY)
+    await sound.beep(800, 250)
+    light_matrix.show_image(light_matrix.IMAGE_HEART)
+    await sound.beep(1000, 250)
 async def main():
     while True:
         # Seta o par de motores e inicia o movimento
@@ -40,60 +92,12 @@ async def main():
         motor_pair.stop(motor_pair.PAIR_1)
         print("Leu a cor PRETA!!!!")
         #####################
-        dist_cm = 20# distância de cada segmento
-        dist_deg = deg_for_cm(dist_cm)
-        # 1) Curva para a direita (esq 20%, dir 70%)
-        await motor_pair.move_tank_for_degrees(
-            motor_pair.PAIR_1,
-            dist_deg,
-            200,# esquerdo
-            700# direito
-        )
-        # 2) Curva para a esquerda (esq 70%, dir 20%)
-        await motor_pair.move_tank_for_degrees(
-            motor_pair.PAIR_1,
-            dist_deg,
-            700,
-            200
-        )
-        # 3) Curva para a esquerda (esq 70%, dir 20%)
-        await motor_pair.move_tank_for_degrees(
-            motor_pair.PAIR_1,
-            dist_deg,
-            700,
-            200
-        )
-        # 4) Curva para a direita (esq 20%, dir 70%)
-        await motor_pair.move_tank_for_degrees(
-            motor_pair.PAIR_1,
-            dist_deg,
-            200,
-            700
-        )
+        await oito()
         await runloop.until(force_sensor_pressed)
         print("Sensor pressionado!!")
-        await motor_pair.move_for_degrees(
-            motor_pair.PAIR_1,
-            deg_for_cm(30),
-            0, # steering reto
-            velocity=600 # ajuste se quiser (deg/s)
-        )
-        # Trás 30 cm
-        await motor_pair.move_for_degrees(
-            motor_pair.PAIR_1,
-            -deg_for_cm(30),# negativo = trás
-            0,
-            velocity=600
-        )
-        sound.volume(75)
+        await frentetras()
+        sound.volume(100)
         for i in range (4):
-            light_matrix.show_image(light_matrix.IMAGE_HAPPY)
-            await sound.beep(400, 250)
-            light_matrix.show_image(light_matrix.IMAGE_SAD)
-            await sound.beep(600, 250)
-            light_matrix.show_image(light_matrix.IMAGE_ANGRY)
-            await sound.beep(800, 250)
-            light_matrix.show_image(light_matrix.IMAGE_HEART)
-            await sound.beep(1000, 250)
+            await seqsonseimagens()
         print("Sons emitidos com sucesso!!!")
 runloop.run(main())
