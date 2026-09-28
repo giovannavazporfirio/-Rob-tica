@@ -22,7 +22,7 @@ import runloop, time, motor_pair, distance_sensor, color_sensor, color, force_se
 
 def obstaculo():
     distancia = distance_sensor.distance(port.D)
-    return distancia > 0 and distancia < 50
+    return distancia > 0 and distancia < 60
 def fita():
     intensidade = color_sensor.reflection(port.E)
     if intensidade > 90:
@@ -52,16 +52,17 @@ async def main():
     #comecou = True
     while True:
         print("loop comecou")
-        motion_sensor.reset_yaw(0)
-        await runloop.sleep_ms(500)
         if voltando == False:
             motor_pair.move(motor_pair.PAIR_1, 0)
             await runloop.until(obstaculo)
             print("detectou obstaculo")
+            motor_pair.stop(motor_pair.PAIR_1)
         else:
             voltando = False
         #se esta livre ou nao:
         async def checar():
+            motion_sensor.reset_yaw(0)
+            await runloop.sleep_ms(500)
             esquerda = False
             direita = False
             motor_pair.move_tank(
@@ -166,12 +167,23 @@ async def main():
                     await runloop.sleep_ms(1)
                 motor_pair.stop(motor_pair.PAIR_1)
             elif direita == False and esquerda == False:
+                motor_pair.move_tank(
+                    motor_pair.PAIR_1,
+                    120,
+                    -120
+                )
+                inicio = time.ticks_ms()
+                while motion_sensor.tilt_angles()[0] * -0.1 <= 0:
+                    if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
+                        break
+                    await runloop.sleep_ms(1)
+                motor_pair.stop(motor_pair.PAIR_1)
                 await motor_pair.move_for_degrees(
-                motor_pair.PAIR_1,
-                deg_for_cm(20),
-                0 # steering reto
-            )
-            voltando = True
+                    motor_pair.PAIR_1,
+                    deg_for_cm(20),
+                    0 # steering reto
+                )
+                voltando = True
 
 
 
