@@ -2,8 +2,12 @@
 # Lucas Barbosa Coutinho
 # Pedro Henrique Santos
 
-from hub import light_matrix
-import runloop
+# Direita: A
+# Esquerda: B
+# 
+# Distância: D
+# Cor: E
+# Força: F
 
 from hub import port
 from hub import sound
@@ -37,41 +41,72 @@ def esperarcurva(angulo):
 
 motor_pair.pair(motor_pair.PAIR_1, port.A, port.B)
 comecou = False
+TURN_DEG_MOT = 180
+CM_PER_ROT = 17.6
+def deg_for_cm(cm):# cm -> graus do motor
+    return int(cm / CM_PER_ROT * 360)
 async def main():
+    voltando = False
     await runloop.until(toque)
     #await runloop.until(lambda: not fita())
     #comecou = True
     while True:
         print("loop comecou")
-        motor_pair.move(motor_pair.PAIR_1, 0)
-        await runloop.until(obstaculo)
-        print("detectou obstaculo")
+        if voltando == False:
+            motor_pair.move(motor_pair.PAIR_1, 0)
+            await runloop.until(obstaculo)
+            print("detectou obstaculo")
+        else:
+            voltando = False
         #se esta livre ou nao:
         esquerda = False
         direita = False
-        girar(1)
-        await runloop.until(lambda: esperarcurva(90))
-        motor_pair.stop(motor_pair.PAIR_1)
-        print("girou")
-        sleep(1)
+        await motor_pair.move_tank_for_degrees(
+            motor_pair.PAIR_1,
+            TURN_DEG_MOT,
+            600, # esquerdo
+            -600 # direito
+        )
         if obstaculo() == False:
             direita = True
-        girar(-1)
-        await runloop.until(lambda: esperarcurva(-180))
-        motor_pair.stop(motor_pair.PAIR_1)
+        await motor_pair.move_tank_for_degrees(
+            motor_pair.PAIR_1,
+            TURN_DEG_MOT * 2,
+            -600, # esquerdo
+            600 # direito
+        )
         if obstaculo() == False:
             esquerda = True
         if direita == True and esquerda == False:
-            girar(1)
-            await runloop.until(lambda: esperarcurva(180))
+            await motor_pair.move_tank_for_degrees(
+                motor_pair.PAIR_1,
+                TURN_DEG_MOT * 2,
+                600, # esquerdo
+                -600 # direito
+            )
         elif direita == True and esquerda == True:
             escolhido = random.randint(1, 2)
             if escolhido == 1:
-                girar(1)
-                await runloop.until(lambda: esperarcurva(180))
+                await motor_pair.move_tank_for_degrees(
+                    motor_pair.PAIR_1,
+                    TURN_DEG_MOT * 2,
+                    600, # esquerdo
+                    -600 # direito
+                )
         elif direita == False and esquerda == False:
-            girar(-1)
-            await runloop.until(lambda: esperarcurva(-90))
-                
+            await motor_pair.move_tank_for_degrees(
+                motor_pair.PAIR_1,
+                TURN_DEG_MOT,
+                -600, # esquerdo
+                600 # direito
+            )
+            await motor_pair.move_for_degrees(
+                motor_pair.PAIR_1,
+                deg_for_cm(20),
+                0 # steering reto
+            )
+            voltando = True
+
+
 
 runloop.run(main())
