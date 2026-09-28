@@ -35,7 +35,7 @@ def girar(sinal):
     print("girando")
     motion_sensor.reset_yaw(0)
     motor_pair.stop(motor_pair.PAIR_1)
-    motor_pair.move_tank(motor_pair.PAIR_1, 200*sinal, -200*sinal)
+    motor_pair.move_tank(motor_pair.PAIR_1, 120*sinal, -120*sinal)
 def esperarcurva(angulo):
     return abs(motion_sensor.tilt_angles()[0] * -0.1) > angulo
 
@@ -52,6 +52,8 @@ async def main():
     #comecou = True
     while True:
         print("loop comecou")
+        motion_sensor.reset_yaw(0)
+        await runloop.sleep_ms(500)
         if voltando == False:
             motor_pair.move(motor_pair.PAIR_1, 0)
             await runloop.until(obstaculo)
@@ -59,55 +61,112 @@ async def main():
         else:
             voltando = False
         #se esta livre ou nao:
-        esquerda = False
-        direita = False
-        motion_sensor.reset_yaw(0)
-        motor_pair.move_tank(
-            motor_pair.PAIR_1,
-            200,
-            -200
-        )
-
-        # Espera chegar a 90 graus
-        while motion_sensor.tilt_angles()[0] * -0.1 <= 90:
-            pass
-
-        # Para
-        motor_pair.stop(motor_pair.PAIR_1)
-        if obstaculo() == False:
-            direita = True
-        await motor_pair.move_tank_for_degrees(
-            motor_pair.PAIR_1,
-            TURN_DEG_MOT * 2,
-            -600, # esquerdo
-            600 # direito
-        )
-        if obstaculo() == False:
-            esquerda = True
-        if direita == True and esquerda == False:
-            await motor_pair.move_tank_for_degrees(
+        async def checar():
+            esquerda = False
+            direita = False
+            motor_pair.move_tank(
                 motor_pair.PAIR_1,
-                TURN_DEG_MOT * 2,
-                600, # esquerdo
-                -600 # direito
+                120,
+                -120
             )
+            inicio = time.ticks_ms()
+            while motion_sensor.tilt_angles()[0] * -0.1 <= 90:
+                if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
+                    break
+                await runloop.sleep_ms(1)
+            motor_pair.stop(motor_pair.PAIR_1)
+            if obstaculo() == False:
+                direita = True
+            motor_pair.move_tank(
+                motor_pair.PAIR_1,
+                -120,
+                120
+            )
+            inicio = time.ticks_ms()
+            while motion_sensor.tilt_angles()[0] * -0.1 >= -90:
+                if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
+                    break
+                await runloop.sleep_ms(1)
+            motor_pair.stop(motor_pair.PAIR_1)
+            if obstaculo() == False:
+                esquerda = True
+            return esquerda, direita
+        esquerda, direita = await checar()
+        if direita == True and esquerda == False:
+            motor_pair.move_tank(
+                motor_pair.PAIR_1,
+                120,
+                -120
+            )
+            inicio = time.ticks_ms()
+            while motion_sensor.tilt_angles()[0] * -0.1 <= 90:
+                if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
+                    break
+                await runloop.sleep_ms(1)
+            motor_pair.stop(motor_pair.PAIR_1)
         elif direita == True and esquerda == True:
             escolhido = random.randint(1, 2)
             if escolhido == 1:
-                await motor_pair.move_tank_for_degrees(
-                    motor_pair.PAIR_1,
-                    TURN_DEG_MOT * 2,
-                    600, # esquerdo
-                    -600 # direito
-                )
-        elif direita == False and esquerda == False:
-            await motor_pair.move_tank_for_degrees(
+                motor_pair.move_tank(
                 motor_pair.PAIR_1,
-                TURN_DEG_MOT,
-                -600, # esquerdo
-                600 # direito
+                120,
+                -120
             )
+            inicio = time.ticks_ms()
+            while motion_sensor.tilt_angles()[0] * -0.1 <= 90:
+                if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
+                    break
+                await runloop.sleep_ms(1)
+            motor_pair.stop(motor_pair.PAIR_1)
+        elif direita == False and esquerda == False:
+            print("dando meia volta")
+            motion_sensor.reset_yaw(0)
+            await runloop.sleep_ms(500)
+            motor_pair.move_tank(
+                motor_pair.PAIR_1,
+                -120,
+                120
+            )
+            inicio = time.ticks_ms()
+            while motion_sensor.tilt_angles()[0] * -0.1 >= -90:
+                if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
+                    break
+                await runloop.sleep_ms(1)
+            motor_pair.stop(motor_pair.PAIR_1)
             await motor_pair.move_for_degrees(
+                motor_pair.PAIR_1,
+                deg_for_cm(20),
+                0 # steering reto
+            )
+            esquerda, direita = await checar()
+            if direita == True and esquerda == False:
+                motor_pair.move_tank(
+                    motor_pair.PAIR_1,
+                    120,
+                    -120
+                )
+                inicio = time.ticks_ms()
+                while motion_sensor.tilt_angles()[0] * -0.1 <= 90:
+                    if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
+                        break
+                    await runloop.sleep_ms(1)
+                motor_pair.stop(motor_pair.PAIR_1)
+            elif direita == True and esquerda == True:
+                escolhido = random.randint(1, 2)
+                if escolhido == 1:
+                    motor_pair.move_tank(
+                    motor_pair.PAIR_1,
+                    120,
+                    -120
+                )
+                inicio = time.ticks_ms()
+                while motion_sensor.tilt_angles()[0] * -0.1 <= 90:
+                    if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
+                        break
+                    await runloop.sleep_ms(1)
+                motor_pair.stop(motor_pair.PAIR_1)
+            elif direita == False and esquerda == False:
+                await motor_pair.move_for_degrees(
                 motor_pair.PAIR_1,
                 deg_for_cm(20),
                 0 # steering reto
