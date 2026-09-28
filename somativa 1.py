@@ -4,7 +4,7 @@
 
 # Direita: A
 # Esquerda: B
-# 
+#
 # Distância: D
 # Cor: E
 # Força: F
@@ -61,12 +61,19 @@ async def main():
         #se esta livre ou nao:
         esquerda = False
         direita = False
-        await motor_pair.move_tank_for_degrees(
+        motion_sensor.reset_yaw(0)
+        motor_pair.move_tank(
             motor_pair.PAIR_1,
-            TURN_DEG_MOT,
-            600, # esquerdo
-            -600 # direito
+            200,
+            -200
         )
+
+        # Espera chegar a 90 graus
+        while motion_sensor.tilt_angles()[0] * -0.1 <= 90:
+            pass
+
+        # Para
+        motor_pair.stop(motor_pair.PAIR_1)
         if obstaculo() == False:
             direita = True
         await motor_pair.move_tank_for_degrees(
