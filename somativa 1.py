@@ -17,8 +17,8 @@ from motor import run_for_degrees
 from time import sleep
 import runloop, time, motor_pair, distance_sensor, color_sensor, color, force_sensor, random
 
-#fita preta: comeco
-#fita branca: fim
+#fita preta: comeco 0
+#fita branca: fim 1
 
 def obstaculo():
     distancia = distance_sensor.distance(port.D)
@@ -26,9 +26,9 @@ def obstaculo():
 def fita():
     intensidade = color_sensor.reflection(port.E)
     if intensidade > 90:
-        return True
-    elif intensidade < 10:
-        return False
+        return 1
+    elif intensidade < 20:
+        return 0
 def toque():
     return force_sensor.pressed(port.F)
 async def girar(angulo):
@@ -63,16 +63,33 @@ def deg_for_cm(cm):# cm -> graus do motor
     return int(cm / CM_PER_ROT * 360)
 async def main():
     voltando = False
+    comecou = False
     await runloop.until(toque)
-    #await runloop.until(lambda: not fita())
-    #comecou = True
     while True:
         print("loop comecou")
         if voltando == False:
             motor_pair.move(motor_pair.PAIR_1, 0)
-            await runloop.until(obstaculo)
-            print("detectou obstaculo")
-            motor_pair.stop(motor_pair.PAIR_1)
+            if comecou == False:
+                await runloop.until(lambda: not fita())
+                sleep(2)
+                comecou = True
+            await runloop.until(lambda: obstaculo() == True or fita() == 0 or fita() == 1)
+            if obstaculo() == True:
+                motor_pair.stop(motor_pair.PAIR_1)
+            elif fita() == 1:
+                sleep(1.5)
+                motor_pair.stop(motor_pair.PAIR_1)
+                light_matrix.show_image(light_matrix.IMAGE_HAPPY)
+                await sound.beep(400, 250)
+                await sound.beep(600, 250)
+                await sound.beep(800, 250)
+                await sound.beep(1000, 250)
+                break
+            elif fita() == 0:
+                motor_pair.stop(motor_pair.PAIR_1)
+                await girar(90)
+                await girar(90)
+                continue
         else:
             voltando = False
         #se esta livre ou nao:
