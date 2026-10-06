@@ -17,130 +17,193 @@ from motor import run_for_degrees
 from time import sleep
 import runloop, time, motor_pair, distance_sensor, color_sensor, color, force_sensor, random
 
-#fita preta: comeco 0
-#fita branca: fim 1
+# fita preta: comeco 0
+# fita branca: fim 1
+
 
 def obstaculo():
     distancia = distance_sensor.distance(port.D)
-    return distancia > 0 and distancia < 60
+
+    if (distancia > 0 and distancia < 70) or distancia == -1:
+        return True
+    else:
+        return False
+
+
 def fita():
     intensidade = color_sensor.reflection(port.E)
+
     if intensidade > 90:
         return 1
     elif intensidade < 20:
         return 0
+
+
 def toque():
     return force_sensor.pressed(port.F)
+
+
+# ============================================================
+# GIRO RÁPIDO E PRECISO
+# ============================================================
+
 async def girar(angulo):
+
     sinal = 1
+
     if angulo < 0:
         sinal = -1
-    motor_pair.move_tank(
-        motor_pair.PAIR_1,
-        120 * sinal,
-        -120 * sinal
-    )
-    inicio = time.ticks_ms()
-    if sinal == 1:
-        while motion_sensor.tilt_angles()[0] * -0.1 <= angulo:
-            if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
-                break
-            await runloop.sleep_ms(1)
-    else:
-        while motion_sensor.tilt_angles()[0] * -0.1 >= angulo:
-            if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
-                break
-            await runloop.sleep_ms(1)
-    motor_pair.stop(motor_pair.PAIR_1)
+
+    # Zera o giroscópio antes do giro
     motion_sensor.reset_yaw(0)
     await runloop.until(motion_sensor.stable)
 
-motor_pair.pair(motor_pair.PAIR_1, port.A, port.B)
-comecou = False
-TURN_DEG_MOT = 180
-CM_PER_ROT = 17.6
-def deg_for_cm(cm):# cm -> graus do motor
-    return int(cm / CM_PER_ROT * 360)
-async def main():
-    voltando = False
-    comecou = False
-    await runloop.until(toque)
-    while True:
-        print("loop comecou")
-        if voltando == False:
-            motor_pair.move(motor_pair.PAIR_1, 0)
-            if comecou == False:
-                await runloop.until(lambda: not fita())
-                sleep(2)
-                comecou = True
-            await runloop.until(lambda: obstaculo() == True or fita() == 0 or fita() == 1)
-            if obstaculo() == True:
-                motor_pair.stop(motor_pair.PAIR_1)
-            elif fita() == 1:
-                sleep(1.5)
-                motor_pair.stop(motor_pair.PAIR_1)
-                light_matrix.show_image(light_matrix.IMAGE_HAPPY)
-                await sound.beep(400, 250)
-                await sound.beep(600, 250)
-                await sound.beep(800, 250)
-                await sound.beep(1000, 250)
-                break
-            elif fita() == 0:
-                motor_pair.stop(motor_pair.PAIR_1)
-                await girar(90)
-                await girar(90)
-                continue
-        else:
-            voltando = False
-        #se esta livre ou nao:
-        async def checar():
-            motion_sensor.reset_yaw(0)
-            await runloop.until(motion_sensor.stable)
-            esquerda = False
-            direita = False
-            await girar(90)
-            if obstaculo() == False:
-                direita = True
-            await girar(-90)
-            await girar(-90)
-            if obstaculo() == False:
-                esquerda = True
-            return esquerda, direita
-        esquerda, direita = await checar()
-        if direita == True and esquerda == False:
-            await girar(90)
-            await girar(90)
-        elif direita == True and esquerda == True:
-            escolhido = random.randint(1, 2)
-            if escolhido == 1:
-                await girar(90)
-                await girar(90)
-        elif direita == False and esquerda == False:
-            print("dando meia volta")
-            await girar(-90)
-            await motor_pair.move_for_degrees(
-                motor_pair.PAIR_1,
-                deg_for_cm(20),
-                0 # steering reto
-            )
-            esquerda, direita = await checar()
-            if direita == True and esquerda == False:
-                await girar(90)
-                await girar(90)
-            elif direita == True and esquerda == True:
-                escolhido = random.randint(1, 2)
-                if escolhido == 1:
-                    await girar(90)
-                    await girar(90)
-            elif direita == False and esquerda == False:
-                await girar(90)
-                await motor_pair.move_for_degrees(
-                    motor_pair.PAIR_1,
-                    deg_for_cm(20),
-                    0 # steering reto
-                )
-                voltando = True
+    alvo = abs(angulo)
 
+    inicio = time.ticks_ms()
+
+    while True:
+
+        atual = motion_sensor.tilt_angles()[0] * -0.1
+        atual = abs(atual)
+
+        restante = alvo - atual
+
+        # Chegou no ângulo
+        if restante <= 0:
+            break
+
+        # Segurança contra travamento
+        if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
+            break
+
+        # ----------------------------------------------------
+        # VELOCIDADE
+        # ----------------------------------------------------
+        #
+        # Longe do alvo = muito rápido
+        # Perto do alvo = desacelera
+        #
+
+        if restante > 25:
+            velocidade = 300
+
+        elif restante > 15:
+            velocidade = 200
+
+        elif restante > 8:
+            velocidade = 100
+
+        elif restante > 3:
+            velocidade = 150
+
+        else:
+            velocidade = 50
+
+        # ----------------------------------------------------
+        # GIRAR
+        # ----------------------------------------------------
+
+        motor_pair.move_tank(
+            motor_pair.PAIR_1,
+            velocidade * sinal,
+            -velocidade * sinal
+        )
+
+        await runloop.sleep_ms(2)
+
+    motor_pair.stop(motor_pair.PAIR_1)
+
+    # Pequena estabilização
+    await runloop.sleep_ms(30)
+
+    motion_sensor.reset_yaw(0)
+
+    await runloop.until(motion_sensor.stable)
+
+
+motor_pair.pair(motor_pair.PAIR_1, port.A, port.B)
+
+
+comecou = False
+
+# ============================================================
+# CALIBRAÇÃO DO DESLOCAMENTO
+# ============================================================
+
+TURN_DEG_MOT = 180
+
+# Quantos cm o robô anda com 1 volta da roda
+CM_PER_ROT = 17.6
+
+
+def deg_for_cm(cm):
+    return int(cm / CM_PER_ROT * 360)
+
+
+# ============================================================
+# ANDAR 20 CM
+# ============================================================
+
+async def andar_20cm():
+
+    graus = deg_for_cm(19)
+
+    await motor_pair.move_for_degrees(
+        motor_pair.PAIR_1,
+        graus,
+        0,
+        velocity=200
+    )
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+async def main():
+
+    comecou = False
+
+    await runloop.until(toque)
+
+    motor_pair.move(motor_pair.PAIR_1, 0)
+
+    await runloop.until(lambda: (distance_sensor.distance(port.D) > 0 and distance_sensor.distance(port.D) < 50) or distance_sensor.distance(port.D) == -1)
+    motor_pair.stop(motor_pair.PAIR_1)
+
+    while True:
+
+        print("loop comecou")
+
+        # ====================================================
+        # ANDAR
+        # ====================================================
+
+        if comecou == True:
+
+            await andar_20cm()
+
+        else:
+
+            comecou = True
+
+        # ====================================================
+        # SUA LÓGICA ORIGINAL
+        # ====================================================
+        await girar(90)
+        if obstaculo() == False:
+            continue
+        else:
+            await girar(-90)
+            if obstaculo() == False:
+                continue
+            else:
+                await girar(-90)
+                if obstaculo() == False:
+                    continue
+                else:
+                    await girar(-90)
 
 
 runloop.run(main())
