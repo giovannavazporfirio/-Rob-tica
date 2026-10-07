@@ -14,7 +14,7 @@ from hub import sound
 from hub import light_matrix
 from hub import motion_sensor
 from motor import run_for_degrees
-from time import sleep
+from time import sleep, sleep_ms
 import runloop, time, motor_pair, distance_sensor, color_sensor, color, force_sensor, random
 
 # fita preta: comeco 0
@@ -24,7 +24,7 @@ import runloop, time, motor_pair, distance_sensor, color_sensor, color, force_se
 def obstaculo():
     distancia = distance_sensor.distance(port.D)
 
-    if (distancia > 0 and distancia < 70) or distancia == -1:
+    if (distancia > 0 and distancia < 110):
         return True
     else:
         return False
@@ -33,19 +33,16 @@ def obstaculo():
 def fita():
     intensidade = color_sensor.reflection(port.E)
 
-    if intensidade > 90:
+    if intensidade > 89.5: ##branco
         return 1
-    elif intensidade < 20:
+    elif intensidade < 20: #preto
         return 0
+    else:
+        return 2
 
 
 def toque():
     return force_sensor.pressed(port.F)
-
-
-# ============================================================
-# GIRO RÁPIDO E PRECISO
-# ============================================================
 
 async def girar(angulo):
 
@@ -77,32 +74,20 @@ async def girar(angulo):
         if time.ticks_diff(time.ticks_ms(), inicio) >= 3000:
             break
 
-        # ----------------------------------------------------
-        # VELOCIDADE
-        # ----------------------------------------------------
-        #
-        # Longe do alvo = muito rápido
-        # Perto do alvo = desacelera
-        #
-
         if restante > 25:
-            velocidade = 300
-
-        elif restante > 15:
             velocidade = 200
 
-        elif restante > 8:
+        elif restante > 15:
             velocidade = 100
 
-        elif restante > 3:
-            velocidade = 150
-
-        else:
+        elif restante > 8:
             velocidade = 50
 
-        # ----------------------------------------------------
-        # GIRAR
-        # ----------------------------------------------------
+        elif restante > 3:
+            velocidade = 25
+
+        else:
+            velocidade = 10
 
         motor_pair.move_tank(
             motor_pair.PAIR_1,
@@ -127,10 +112,6 @@ motor_pair.pair(motor_pair.PAIR_1, port.A, port.B)
 
 comecou = False
 
-# ============================================================
-# CALIBRAÇÃO DO DESLOCAMENTO
-# ============================================================
-
 TURN_DEG_MOT = 180
 
 # Quantos cm o robô anda com 1 volta da roda
@@ -139,58 +120,21 @@ CM_PER_ROT = 17.6
 
 def deg_for_cm(cm):
     return int(cm / CM_PER_ROT * 360)
-
-
-# ============================================================
-# ANDAR 20 CM
-# ============================================================
-
-async def andar_20cm():
-
-    graus = deg_for_cm(19)
-
-    await motor_pair.move_for_degrees(
-        motor_pair.PAIR_1,
-        graus,
-        0,
-        velocity=200
-    )
-
-
-# ============================================================
-# MAIN
-# ============================================================
-
 async def main():
-
     comecou = False
-
+    chegou = False
+    fugiu = False
+    pfita = 0
     await runloop.until(toque)
-
-    motor_pair.move(motor_pair.PAIR_1, 0)
-
-    await runloop.until(lambda: (distance_sensor.distance(port.D) > 0 and distance_sensor.distance(port.D) < 50) or distance_sensor.distance(port.D) == -1)
-    motor_pair.stop(motor_pair.PAIR_1)
-
     while True:
-
         print("loop comecou")
-
-        # ====================================================
-        # ANDAR
-        # ====================================================
-
-        if comecou == True:
-
-            await andar_20cm()
-
-        else:
-
-            comecou = True
-
-        # ====================================================
-        # SUA LÓGICA ORIGINAL
-        # ====================================================
+        graus = deg_for_cm(18.5)
+        await motor_pair.move_for_degrees(
+            motor_pair.PAIR_1,
+            graus,
+            0,
+            velocity=200
+        )
         await girar(90)
         if obstaculo() == False:
             continue
@@ -203,7 +147,7 @@ async def main():
                 if obstaculo() == False:
                     continue
                 else:
-                    await girar(-90)
+                    await girar(-91)
 
 
 runloop.run(main())
