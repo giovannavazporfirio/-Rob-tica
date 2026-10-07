@@ -24,7 +24,7 @@ import runloop, time, motor_pair, distance_sensor, color_sensor, color, force_se
 def obstaculo():
     distancia = distance_sensor.distance(port.D)
 
-    if (distancia > 0 and distancia < 110):
+    if (distancia > 0 and distancia < 105):
         return True
     else:
         return False
@@ -128,29 +128,29 @@ async def main():
     await runloop.until(toque)
     while True:
         print("loop comecou")
-        graus = deg_for_cm(19)
+        graus = deg_for_cm(19.5)
+        motion_sensor.reset_yaw(0)
         await motor_pair.move_for_degrees(
             motor_pair.PAIR_1,
             graus,
             0,
-            velocity=400
+            velocity=450
         )
-        motion_sensor.reset_yaw(0)
         await girar(90)
         if obstaculo() == False:
             continue
         else:
-            motion_sensor.reset_yaw(0)
+            
             await girar(-90)
             if obstaculo() == False:
                 continue
             else:
-                motion_sensor.reset_yaw(0)
+                
                 await girar(-90)
                 if obstaculo() == False:
                     continue
                 else:
-                    motion_sensor.reset_yaw(0)
+        
                     await girar(-90)
 
 
