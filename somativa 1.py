@@ -75,19 +75,19 @@ async def girar(angulo):
             break
 
         if restante > 25:
-            velocidade = 200
+            velocidade = 300
 
         elif restante > 15:
-            velocidade = 100
+            velocidade = 200
 
         elif restante > 8:
-            velocidade = 50
+            velocidade = 100
 
         elif restante > 3:
-            velocidade = 25
+            velocidade = 50
 
         else:
-            velocidade = 20
+            velocidade = 25
 
         motor_pair.move_tank(
             motor_pair.PAIR_1,
@@ -128,13 +128,12 @@ async def main():
     await runloop.until(toque)
     while True:
         print("loop comecou")
-        graus = deg_for_cm(18)
-        motion_sensor.reset_yaw(0)
+        graus = deg_for_cm(19)
         await motor_pair.move_for_degrees(
             motor_pair.PAIR_1,
             graus,
             0,
-            velocity=200
+            velocity=400
         )
         motion_sensor.reset_yaw(0)
         await girar(90)
@@ -152,7 +151,7 @@ async def main():
                     continue
                 else:
                     motion_sensor.reset_yaw(0)
-                    await girar(-89)
+                    await girar(-90)
 
 
 runloop.run(main())
