@@ -8,9 +8,9 @@ Servo servo4;
 void setup() {
   Serial.begin(9600);
 
-  servo1.attach(11);
-  servo2.attach(10);
-  servo3.attach(9);
+  servo1.attach(2); //funciona
+  servo2.attach(3); //funciona
+  servo3.attach(4); //funciona 
   servo4.attach(6);
 }
 
