@@ -10,7 +10,7 @@ void setup() {
 
   servo1.attach(2); //funciona
   servo2.attach(3); //funciona
-  servo3.attach(4); //funciona 
+  servo3.attach(7); //funciona 
   servo4.attach(6);
 
   servo1.write(0);
