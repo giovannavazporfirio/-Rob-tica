@@ -12,6 +12,12 @@ void setup() {
   servo2.attach(3); //funciona
   servo3.attach(4); //funciona 
   servo4.attach(6);
+
+  servo1.write(0);
+  servo2.write(90);
+  servo3.write(90);
+  servo4.write(90);
+
 }
 
 void loop() {
