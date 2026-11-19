@@ -5,39 +5,65 @@ Servo servo2;
 Servo servo3;
 Servo servo4;
 
+int pos1 = 0;
+int pos2 = 90;
+int pos3 = 90;
+int pos4 = 90;
+
+void moverServo(Servo &servo, int &posAtual, int posDesejada) {
+  if (posDesejada > posAtual) {
+    for (int i = posAtual; i <= posDesejada; i++) {
+      servo.write(i);
+      delay(15);
+    }
+  } 
+  else {
+    for (int i = posAtual; i >= posDesejada; i--) {
+      servo.write(i);
+      delay(15);
+    }
+  }
+
+  posAtual = posDesejada;
+}
+
 void setup() {
   Serial.begin(9600);
 
-  servo1.attach(2); //funciona
-  servo2.attach(3); //funciona
-  servo3.attach(7); //funciona 
+  servo1.attach(2);
+  servo2.attach(3);
+  servo3.attach(7);
   servo4.attach(6);
 
-  servo1.write(0);
-  servo2.write(90);
-  servo3.write(90);
-  servo4.write(90);
-
+  servo1.write(pos1);
+  servo2.write(pos2);
+  servo3.write(pos3);
+  servo4.write(pos4);
 }
 
 void loop() {
   if (Serial.available() > 0) {
-    char servoId = Serial.read(); // Leia o identificador do servo
+    char servoId = Serial.read();
 
-    int pos = Serial.parseInt(); // Leia a posição desejada
+    int pos = Serial.parseInt();
+
+    pos = constrain(pos, 0, 180);
 
     switch (servoId) {
       case '1':
-        servo1.write(pos); // Mova o servo1 para a posição desejada
+        moverServo(servo1, pos1, pos);
         break;
+
       case '2':
-        servo2.write(pos); // Mova o servo2 para a posição desejada
+        moverServo(servo2, pos2, pos);
         break;
+
       case '3':
-        servo3.write(pos); // Mova o servo3 para a posição desejada
+        moverServo(servo3, pos3, pos);
         break;
+
       case '4':
-        servo4.write(pos); // Mova o servo4 para a posição desejada
+        moverServo(servo4, pos4, pos);
         break;
     }
   }
